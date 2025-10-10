@@ -9,7 +9,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 
-const credentials = JSON.parse(fs.readFileSync("credentials.json"));
+const credentials = JSON.parse(fs.readFileSync("process.env.GOOGLE_CREDENTIALS"));
 
 const auth = new google.auth.GoogleAuth({
   credentials,
