@@ -2,15 +2,22 @@ import express from "express";
 import { google } from "googleapis";
 import bodyParser from "body-parser";
 import cors from "cors";
-import fs from "fs";
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// ✅ Load credentials safely
+let credentials = null;
+if (process.env.GOOGLE_CREDENTIALS) {
+  try {
+    credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  } catch (err) {
+    console.error("❌ Failed to parse GOOGLE_CREDENTIALS:", err.message);
+  }
+}
 
-const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-
+// ✅ Initialize Google Auth
 const auth = new google.auth.GoogleAuth({
   credentials,
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
@@ -18,10 +25,10 @@ const auth = new google.auth.GoogleAuth({
 
 const sheets = google.sheets({ version: "v4", auth });
 
-
+// 🧾 Replace this with your actual Sheet ID
 const SPREADSHEET_ID = "اكتب هنا ID الشيت بتاعك";
 
-// 🟢 نقطة استقبال البيانات من الفورم
+// 🟢 Handle POST request
 app.post("/submit", async (req, res) => {
   try {
     const data = req.body;
@@ -55,7 +62,6 @@ app.post("/submit", async (req, res) => {
       new Date().toLocaleString(),
     ];
 
-    
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: "Sheet1!A:Z",
@@ -70,6 +76,6 @@ app.post("/submit", async (req, res) => {
   }
 });
 
-// ✅ تشغيل السيرفر
+// ✅ Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
