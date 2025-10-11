@@ -24,11 +24,34 @@ const auth = new google.auth.GoogleAuth({
 });
 
 const sheets = google.sheets({ version: "v4", auth });
-
-// 🧾 Replace this with your actual Sheet ID
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
-// 🟢 Handle POST request
+
+app.post("/check-nationalId", async (req, res) => {
+  try {
+    const { nationalId } = req.body;
+    if (!nationalId) return res.status(400).json({ status: "error", message: "الرقم القومي مطلوب." });
+
+    const readResp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "Student_Data!C:C", // نفترض الرقم القومي في العمود C
+    });
+
+    const values = readResp.data.values || [];
+    const existingIds = values.map(r => (r[0] || "").trim()).filter(v => v);
+
+    if (existingIds.includes(nationalId.trim())) {
+      return res.status(409).json({ status: "error", message: "الرقم القومي مسجل بالفعل." });
+    }
+
+    return res.json({ status: "success", message: "الرقم القومي متاح." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ status: "error", message: "حدث خطأ في السيرفر" });
+  }
+});
+
+
 app.post("/submit", async (req, res) => {
   try {
     const data = req.body;
@@ -38,23 +61,19 @@ app.post("/submit", async (req, res) => {
       return res.status(400).json({ status: "error", message: "الرقم القومي مطلوب." });
     }
 
-    // 1) اقرأ عمود الأرقام القومية كله من الشيت
+    // أقرأ العمود للتأكد مرة ثانية (حماية إضافية)
     const readResp = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: "Student_Data!C:C", // نفترض الرقم القومي في العمود C (ثالث عمود)
+      range: "Student_Data!C:C",
     });
+    const values = readResp.data.values || [];
+    const existingIds = values.map(r => (r[0] || "").trim()).filter(v => v);
 
-    const values = readResp.data.values || []; // مصفوفة صفوف، كل صف مصفوفة خلايا
-    // حولهم لسطر واحد ونظف المسافات
-    const existingIds = values.map(r => (r[0] || "").toString().trim()).filter(v => v);
-
-    // 2) تحقق إذا الرقم موجود
     if (existingIds.includes(nationalId)) {
-      console.log("↩️ Duplicate nationalId prevented:", nationalId);
-      return res.status(409).json({ status: "error", message: "الرقم القومي مسجل بالفعل — لا يمكن الإرسال مرتين." });
+      return res.status(409).json({ status: "error", message: "الرقم القومي مسجل بالفعل." });
     }
 
-    // 3) لو مش موجود: أضف الصف
+    // لو مش موجود، أضف الصف
     const row = [
       data.name,
       data.age,
@@ -95,10 +114,9 @@ app.post("/submit", async (req, res) => {
 
   } catch (err) {
     console.error("❌ Error:", err);
-    res.status(500).json({ status: "error", message: err.message || "حدث خطأ في السيرفر" });
+    return res.status(500).json({ status: "error", message: err.message || "حدث خطأ في السيرفر" });
   }
 });
-
 
 // ✅ Start server
 const PORT = process.env.PORT || 3000;
