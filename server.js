@@ -64,7 +64,7 @@ app.post("/submit", async (req, res) => {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: "Sheet1!A:Z",
+      range: "Student_Data",
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [row] },
     });
