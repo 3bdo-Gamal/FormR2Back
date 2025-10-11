@@ -26,7 +26,7 @@ const auth = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: "v4", auth });
 
 // 🧾 Replace this with your actual Sheet ID
-const SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/130n1tfyQz84Xl_iXZFQSTmj9i6TGRo6URwAsJuxd-9s/edit?gid=0#gid=0";
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
 // 🟢 Handle POST request
 app.post("/submit", async (req, res) => {
