@@ -32,11 +32,33 @@ const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 app.post("/submit", async (req, res) => {
   try {
     const data = req.body;
+    const nationalId = (data.nationalId || "").trim();
 
+    if (!nationalId) {
+      return res.status(400).json({ status: "error", message: "الرقم القومي مطلوب." });
+    }
+
+    // 1) اقرأ عمود الأرقام القومية كله من الشيت
+    const readResp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "Student_Data!C:C", // نفترض الرقم القومي في العمود C (ثالث عمود)
+    });
+
+    const values = readResp.data.values || []; // مصفوفة صفوف، كل صف مصفوفة خلايا
+    // حولهم لسطر واحد ونظف المسافات
+    const existingIds = values.map(r => (r[0] || "").toString().trim()).filter(v => v);
+
+    // 2) تحقق إذا الرقم موجود
+    if (existingIds.includes(nationalId)) {
+      console.log("↩️ Duplicate nationalId prevented:", nationalId);
+      return res.status(409).json({ status: "error", message: "الرقم القومي مسجل بالفعل — لا يمكن الإرسال مرتين." });
+    }
+
+    // 3) لو مش موجود: أضف الصف
     const row = [
       data.name,
       data.age,
-      data.nationalId,
+      nationalId,
       data.phone,
       data.whatsapp,
       data.email,
@@ -69,12 +91,14 @@ app.post("/submit", async (req, res) => {
       requestBody: { values: [row] },
     });
 
-    res.json({ status: "success", message: "تم حفظ البيانات بنجاح ✅" });
+    return res.json({ status: "success", message: "تم حفظ البيانات بنجاح ✅" });
+
   } catch (err) {
-    console.error("❌ Error:", err.message);
-    res.status(500).json({ status: "error", message: err.message });
+    console.error("❌ Error:", err);
+    res.status(500).json({ status: "error", message: err.message || "حدث خطأ في السيرفر" });
   }
 });
+
 
 // ✅ Start server
 const PORT = process.env.PORT || 3000;
