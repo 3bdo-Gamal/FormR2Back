@@ -27,27 +27,27 @@ const sheets = google.sheets({ version: "v4", auth });
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
 
-app.post("/check-nationalId", async (req, res) => {
+app.post("/check-nid", async (req, res) => {
   try {
-    const { nationalId } = req.body;
-    if (!nationalId) return res.status(400).json({ status: "error", message: "الرقم القومي مطلوب." });
+    const nationalId = (req.body.nationalId || "").trim();
+    if (!nationalId) return res.status(400).json({ status: "error", message: "الرقم القومي مطلوب" });
 
     const readResp = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: "Student_Data!C:C", // نفترض الرقم القومي في العمود C
+      range: "Student_Data!C:C",
     });
 
     const values = readResp.data.values || [];
-    const existingIds = values.map(r => (r[0] || "").trim()).filter(v => v);
+    const existingIds = values.map(r => (r[0] || "").toString().trim()).filter(v => v);
 
-    if (existingIds.includes(nationalId.trim())) {
-      return res.status(409).json({ status: "error", message: "الرقم القومي مسجل بالفعل." });
+    if (existingIds.includes(nationalId)) {
+      return res.json({ exists: true });
     }
+    return res.json({ exists: false });
 
-    return res.json({ status: "success", message: "الرقم القومي متاح." });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ status: "error", message: "حدث خطأ في السيرفر" });
+    console.error("❌ Error checking NID:", err);
+    res.status(500).json({ status: "error", message: err.message || "حدث خطأ في السيرفر" });
   }
 });
 
