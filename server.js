@@ -87,6 +87,7 @@ app.post("/submit", async (req, res) => {
       data.studentStatus,
       data.university,
       data.faculty,
+      data.score,
       data.graduationYear,
       data.phase1,
       data.solidarity,
